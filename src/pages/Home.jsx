@@ -11,7 +11,6 @@ const SNAPSHOT_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 const emptyForm = (params) => ({
   snapshot_id: params.get('snapshot_id') || '',
   workspace_path: params.get('workspace_path') || '',
-  dry_run: true,
   image: { enabled: true, enable_near_duplicates: true, phash_threshold: 8 },
   dita: { enabled: true, similarity_threshold: 90 },
 });
@@ -132,21 +131,6 @@ const Home = () => {
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-          </div>
-
-          <div>
-            <label className="flex items-center justify-between p-4 bg-slate-900 rounded-lg cursor-pointer">
-              <div>
-                <span className="text-gray-300 block">Dry Run</span>
-                <span className="text-xs text-gray-500">No disk side effects; DB rows are still persisted.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={formData.dry_run}
-                onChange={(e) => setFormData({ ...formData, dry_run: e.target.checked })}
-                className="w-5 h-5 text-blue-500 bg-slate-800 border-slate-700 rounded focus:ring-blue-500 shrink-0 ml-4"
-              />
-            </label>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

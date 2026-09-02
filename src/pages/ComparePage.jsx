@@ -129,20 +129,23 @@ const ComparePage = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <EntityDetailCard label="Reference" entity={data.reference} module={module} snapshotId={snapshotId} />
-          {data.duplicates.map((d) => (
-            <EntityDetailCard key={d.id} label="Duplicate" entity={d} module={module} snapshotId={snapshotId} />
-          ))}
-        </div>
-
-        {module === 'dita' && (
-          <DitaDiffViewer
-            snapshotId={snapshotId}
-            groupId={groupId}
-            cheapDiff={data.diff}
-            duplicates={data.duplicates}
-          />
+        {module === 'dita' ? (
+          <>
+            <EntityDetailCard label="Reference" entity={data.reference} module={module} snapshotId={snapshotId} />
+            <DitaDiffViewer
+              snapshotId={snapshotId}
+              groupId={groupId}
+              cheapDiff={data.diff}
+              duplicates={data.duplicates}
+            />
+          </>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EntityDetailCard label="Reference" entity={data.reference} module={module} snapshotId={snapshotId} />
+            {data.duplicates.map((d) => (
+              <EntityDetailCard key={d.id} label="Duplicate" entity={d} module={module} snapshotId={snapshotId} />
+            ))}
+          </div>
         )}
 
         {module === 'images' && data.reference && data.duplicates.length > 0 && (
