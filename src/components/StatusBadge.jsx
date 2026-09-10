@@ -3,7 +3,7 @@ const STATUS_CONFIG = {
   pending: { bg: 'bg-gray-500', text: 'Pending' },
   promoted: { bg: 'bg-green-500', text: 'Promoted' },
   rejected: { bg: 'bg-red-500', text: 'Rejected' },
-  deleted: { bg: 'bg-slate-600', text: 'Deleted' },
+  deleted: { bg: 'bg-slate-600', text: 'Archived' },
   // Activity status
   success: { bg: 'bg-green-500', text: 'Success' },
   failed: { bg: 'bg-red-500', text: 'Failed' },

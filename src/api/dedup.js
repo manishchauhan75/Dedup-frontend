@@ -49,14 +49,22 @@ export const buildImageFileUrl = (snapshotId, objectId, { thumbnail, max } = {})
 export const promoteGroups = (snapshotId, module, groupIds) =>
   axios.post(`${base}/${snapshotId}/${module}/promote`, { group_ids: groupIds }).then((r) => r.data);
 
+// Bulk: promotes every 100%-matched group for this snapshot+module in one
+// call (no group_ids — the server finds them). Returns a summary
+// (total/promoted/failed/skipped counts) plus the same per-group results
+// array as promoteGroups, each group still applied independently.
+export const promoteAllGroups = (snapshotId, module) =>
+  axios.post(`${base}/${snapshotId}/${module}/promote-all`).then((r) => r.data);
+
 export const rejectGroups = (snapshotId, module, groupIds) =>
   axios.post(`${base}/${snapshotId}/${module}/reject`, { group_ids: groupIds }).then((r) => r.data);
 
 export const getActivity = (snapshotId, module) =>
   axios.get(`${base}/${snapshotId}/${module}/activity`).then((r) => r.data);
 
-// group_ids omitted (or empty) deletes every eligible (promoted) group for
-// this snapshot+module.
+// group_ids omitted (or empty) archives every eligible (promoted) group's
+// duplicate files for this snapshot+module (moved into archive_<module>/,
+// never permanently deleted).
 export const deleteGroups = (snapshotId, module, groupIds) =>
   axios
     .delete(`${base}/${snapshotId}/${module}/delete`, {

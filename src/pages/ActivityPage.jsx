@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Archive } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getActivity, deleteGroups } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
@@ -14,7 +14,8 @@ const ACTION_LABEL = {
   promote: 'Promoted',
   reject: 'Rejected',
   reference_update: 'Reference Updated',
-  delete: 'Deleted',
+  archive: 'Archived',
+  delete: 'Archived', // historical rows recorded before this action was renamed
 };
 
 const SummaryPill = ({ label, value, color }) => (
@@ -54,14 +55,14 @@ const ActivityPage = () => {
     try {
       const result = await deleteGroups(snapshotId, module, null);
       if (result.deleted_count === 0 && result.failed_count === 0) {
-        toast('Nothing eligible to delete right now.');
+        toast('Nothing eligible to archive right now.');
       } else {
-        toast.success(`Deleted ${result.deleted_count} file(s)${result.failed_count ? `, ${result.failed_count} failed` : ''}`);
+        toast.success(`Archived ${result.deleted_count} file(s)${result.failed_count ? `, ${result.failed_count} failed` : ''}`);
       }
       setConfirmOpen(false);
       fetchActivity();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Delete failed');
+      toast.error(error.response?.data?.detail || 'Archive failed');
     } finally {
       setDeleting(false);
     }
@@ -90,10 +91,10 @@ const ActivityPage = () => {
             onClick={() => setConfirmOpen(true)}
             disabled={!data.summary.promoted}
             className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
-            title={!data.summary.promoted ? 'No promoted groups eligible for deletion' : undefined}
+            title={!data.summary.promoted ? 'No promoted groups eligible for archiving' : undefined}
           >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Superseded Files</span>
+            <Archive className="w-4 h-4" />
+            <span>Archive Superseded Files</span>
           </button>
         </div>
 
@@ -101,7 +102,7 @@ const ActivityPage = () => {
           <SummaryPill label="Total Groups" value={data.summary.total_groups} color="text-white" />
           <SummaryPill label="Promoted" value={data.summary.promoted} color="text-green-400" />
           <SummaryPill label="Rejected" value={data.summary.rejected} color="text-red-400" />
-          <SummaryPill label="Deleted" value={data.summary.deleted} color="text-slate-400" />
+          <SummaryPill label="Archived" value={data.summary.deleted} color="text-slate-400" />
           <SummaryPill label="Pending" value={data.summary.pending} color="text-yellow-400" />
           <SummaryPill label="Remaining" value={data.summary.remaining} color="text-pink-400" />
         </div>
@@ -147,9 +148,9 @@ const ActivityPage = () => {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Delete superseded files?"
-        message={`This physically removes every non-reference file from ${MODULE_LABEL[module].toLowerCase()} groups already promoted for this snapshot. The promoted (reference) copy is never touched. This cannot be undone.`}
-        confirmLabel="Delete"
+        title="Archive superseded files?"
+        message={`This moves every non-reference file from ${MODULE_LABEL[module].toLowerCase()} groups already promoted for this snapshot into the archive_${module} directory. The promoted (reference) copy is never touched.`}
+        confirmLabel="Archive"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}

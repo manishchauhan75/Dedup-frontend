@@ -11,8 +11,6 @@ const SNAPSHOT_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 const emptyForm = (params) => ({
   snapshot_id: params.get('snapshot_id') || '',
   workspace_path: params.get('workspace_path') || '',
-  image: { enabled: true, enable_near_duplicates: true, phash_threshold: 8 },
-  dita: { enabled: true, similarity_threshold: 90 },
 });
 
 const Home = () => {
@@ -62,8 +60,6 @@ const Home = () => {
       const result = await runDetection({
         ...formData,
         workspace_path: workspacePath,
-        dita: { ...formData.dita, similarity_threshold: Number(formData.dita.similarity_threshold) },
-        image: { ...formData.image, phash_threshold: Number(formData.image.phash_threshold) },
       });
 
       if (result.status === 'failed') {
@@ -131,68 +127,6 @@ const Home = () => {
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 space-y-4">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white font-medium">Image Dedup</span>
-                <input
-                  type="checkbox"
-                  checked={formData.image.enabled}
-                  onChange={(e) => setFormData({ ...formData, image: { ...formData.image, enabled: e.target.checked } })}
-                  className="w-5 h-5 text-blue-500 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
-                />
-              </label>
-              <label className="flex items-center justify-between text-sm cursor-pointer">
-                <span className="text-gray-300">Enable Near Duplicates</span>
-                <input
-                  type="checkbox"
-                  checked={formData.image.enable_near_duplicates}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: { ...formData.image, enable_near_duplicates: e.target.checked } })
-                  }
-                  className="w-4 h-4 text-blue-500 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
-                />
-              </label>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">pHash Threshold</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="16"
-                  value={formData.image.phash_threshold}
-                  onChange={(e) => setFormData({ ...formData, image: { ...formData.image, phash_threshold: e.target.value } })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 space-y-4">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white font-medium">DITA Dedup</span>
-                <input
-                  type="checkbox"
-                  checked={formData.dita.enabled}
-                  onChange={(e) => setFormData({ ...formData, dita: { ...formData.dita, enabled: e.target.checked } })}
-                  className="w-5 h-5 text-blue-500 bg-slate-800 border-slate-700 rounded focus:ring-blue-500"
-                />
-              </label>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Similarity Threshold (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={formData.dita.similarity_threshold}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dita: { ...formData.dita, similarity_threshold: e.target.value } })
-                  }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
           </div>
 
           <button

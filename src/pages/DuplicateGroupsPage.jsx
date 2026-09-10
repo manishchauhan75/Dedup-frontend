@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Search } from 'lucide-react';
+import { ArrowLeft, CheckCheck, CheckCircle, XCircle, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getDuplicateGroups, promoteGroups, rejectGroups } from '../api/dedup';
+import { getDuplicateGroups, promoteAllGroups, promoteGroups, rejectGroups } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import MatchBadge from '../components/MatchBadge';
 import Loader from '../components/Loader';
@@ -68,6 +68,31 @@ const DuplicateGroupsPage = () => {
     }
   };
 
+  // Bulk promote — no selection needed, the server finds every 100%-matched
+  // group itself. Distinct from runAction('promote', selected): that only
+  // ever promotes what's checked here; this ignores selection entirely.
+  const runPromoteAll = async () => {
+    setBusy(true);
+    try {
+      const data = await promoteAllGroups(snapshotId, module);
+      if (data.total_groups === 0) {
+        toast('No 100% matched groups to promote.');
+      } else {
+        const extra = [
+          data.skipped_count ? `${data.skipped_count} skipped` : null,
+          data.failed_count ? `${data.failed_count} failed` : null,
+        ].filter(Boolean).join(', ');
+        toast.success(`Promoted ${data.promoted_count}/${data.total_groups} group(s)${extra ? ` (${extra})` : ''}`);
+      }
+      fetchGroups();
+      setSelected(new Set());
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to promote all');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <Loader />;
 
   const selectableGroups = groups.filter((g) => g.can_decide);
@@ -89,24 +114,35 @@ const DuplicateGroupsPage = () => {
             <p className="text-gray-400 mt-1">Snapshot: {snapshotId}</p>
           </div>
           {selectableGroups.length > 0 && (
-            <div className="flex items-center space-x-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2">
-              <span className="text-sm text-gray-400">{selected.size} selected</span>
+            <div className="flex items-center space-x-3">
               <button
-                disabled={busy || selected.size === 0}
-                onClick={() => runAction('promote', [...selected])}
-                className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                disabled={busy}
+                onClick={runPromoteAll}
+                title="Promotes every 100%-matched pending group for this snapshot+module in one call"
+                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
               >
-                <CheckCircle className="w-4 h-4" />
-                <span>Promote</span>
+                <CheckCheck className="w-4 h-4" />
+                <span>Promote All ({selectableGroups.length})</span>
               </button>
-              <button
-                disabled={busy || selected.size === 0}
-                onClick={() => runAction('reject', [...selected])}
-                className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-              >
-                <XCircle className="w-4 h-4" />
-                <span>Reject</span>
-              </button>
+              <div className="flex items-center space-x-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2">
+                <span className="text-sm text-gray-400">{selected.size} selected</span>
+                <button
+                  disabled={busy || selected.size === 0}
+                  onClick={() => runAction('promote', [...selected])}
+                  className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Promote</span>
+                </button>
+                <button
+                  disabled={busy || selected.size === 0}
+                  onClick={() => runAction('reject', [...selected])}
+                  className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                >
+                  <XCircle className="w-4 h-4" />
+                  <span>Reject</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
