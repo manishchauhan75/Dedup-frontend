@@ -110,7 +110,7 @@ const SnapshotOverview = () => {
               </Link>
             </div>
           </div>
-          <AnalyticsCards analytics={analytics?.dita} />
+          <AnalyticsCards analytics={analytics?.dita} topicTypes={analytics?.dita?.topic_types} />
         </div>
 
         <div className="space-y-4">
@@ -138,7 +138,7 @@ const SnapshotOverview = () => {
         <div className="space-y-8">
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">DITA Charts</h3>
-            <AnalyticsCharts analytics={analytics?.dita} />
+            <AnalyticsCharts analytics={analytics?.dita} topicTypes={analytics?.dita?.topic_types} />
           </div>
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Image Charts</h3>

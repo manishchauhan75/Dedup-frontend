@@ -9,6 +9,11 @@ import {
   XCircle,
   Trash2,
   Clock,
+  Lightbulb,
+  ListChecks,
+  BookOpen,
+  BookText,
+  Bookmark,
 } from 'lucide-react';
 import { formatNumber } from '../utils/formatters';
 
@@ -16,7 +21,10 @@ import { formatNumber } from '../utils/formatters';
 // GET /api/v1/dedup/{snapshot_id}/analytics — replaces the old separate
 // SummaryCards/DitaSummaryCards, which were hardcoded to two different,
 // now-obsolete report shapes.
-const AnalyticsCards = ({ title, analytics }) => {
+//
+// topicTypes (optional): the dita-only { concept, task, reference, topic, glossary }
+// breakdown from analytics.dita.topic_types - omitted for images, which have no topic types.
+const AnalyticsCards = ({ title, analytics, topicTypes }) => {
   const a = analytics || {};
 
   const cards = [
@@ -32,24 +40,44 @@ const AnalyticsCards = ({ title, analytics }) => {
     { label: 'Remaining', value: a.remaining, icon: Clock, color: 'text-pink-500', bg: 'bg-pink-500/10' },
   ];
 
+  const topicTypeCards = topicTypes
+    ? [
+        { label: 'Concept', value: topicTypes.concept, icon: Lightbulb, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        { label: 'Task', value: topicTypes.task, icon: ListChecks, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { label: 'Reference', value: topicTypes.reference, icon: BookOpen, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+        { label: 'Topic', value: topicTypes.topic, icon: BookText, color: 'text-gray-400', bg: 'bg-gray-500/10' },
+        { label: 'Glossary', value: topicTypes.glossary, icon: Bookmark, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+      ]
+    : [];
+
+  const renderCard = (card) => (
+    <div key={card.label} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-400 text-xs">{card.label}</p>
+          <p className="text-2xl font-bold text-white mt-1">{formatNumber(card.value || 0)}</p>
+        </div>
+        <div className={`${card.bg} p-2 rounded-lg`}>
+          <card.icon className={`w-5 h-5 ${card.color}`} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       {title && <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {cards.map((card) => (
-          <div key={card.label} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-xs">{card.label}</p>
-                <p className="text-2xl font-bold text-white mt-1">{formatNumber(card.value || 0)}</p>
-              </div>
-              <div className={`${card.bg} p-2 rounded-lg`}>
-                <card.icon className={`w-5 h-5 ${card.color}`} />
-              </div>
-            </div>
-          </div>
-        ))}
+        {cards.map(renderCard)}
       </div>
+      {topicTypeCards.length > 0 && (
+        <>
+          <p className="text-gray-400 text-xs uppercase tracking-wider mt-6 mb-3">Topic Types</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {topicTypeCards.map(renderCard)}
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -3,7 +3,9 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 // Same recharts bar/pie pattern as the old Charts.jsx, fed by the new
 // analytics shape (group-status breakdown) instead of the old
 // same_name_groups/scanned_images fields.
-const AnalyticsCharts = ({ analytics }) => {
+// topicTypes (optional): the dita-only { concept, task, reference, topic, glossary }
+// breakdown from analytics.dita.topic_types - omitted for images, which have no topic types.
+const AnalyticsCharts = ({ analytics, topicTypes }) => {
   const a = analytics || {};
 
   const barData = [
@@ -21,8 +23,18 @@ const AnalyticsCharts = ({ analytics }) => {
 
   const COLORS = ['#22c55e', '#ef4444', '#64748b', '#ec4899'];
 
+  const topicTypeData = topicTypes
+    ? [
+        { name: 'Concept', value: topicTypes.concept || 0, fill: '#a855f7' },
+        { name: 'Task', value: topicTypes.task || 0, fill: '#3b82f6' },
+        { name: 'Reference', value: topicTypes.reference || 0, fill: '#14b8a6' },
+        { name: 'Topic', value: topicTypes.topic || 0, fill: '#6b7280' },
+        { name: 'Glossary', value: topicTypes.glossary || 0, fill: '#f59e0b' },
+      ]
+    : null;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className={`grid grid-cols-1 ${topicTypeData ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
       <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
         <h3 className="text-lg font-semibold text-white mb-4">Match Breakdown</h3>
         <ResponsiveContainer width="100%" height={260}>
@@ -60,6 +72,24 @@ const AnalyticsCharts = ({ analytics }) => {
           </PieChart>
         </ResponsiveContainer>
       </div>
+
+      {topicTypeData && (
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4">Topic Types</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={topicTypeData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="name" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                labelStyle={{ color: '#f1f5f9' }}
+              />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 };

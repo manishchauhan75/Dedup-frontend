@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { getDuplicateGroups, promoteAllGroups, promoteGroups, rejectGroups } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import MatchBadge from '../components/MatchBadge';
+import TopicTypeBadge from '../components/TopicTypeBadge';
 import Loader from '../components/Loader';
 
 const MODULE_LABEL = { dita: 'DITA', images: 'Image' };
@@ -206,7 +207,10 @@ const DuplicateGroupsPage = () => {
 
                 <div className="px-6 py-3 border-b border-slate-700">
                   <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Reference</p>
-                  <p className="text-white break-all font-medium">{group.reference_member?.path || 'N/A'}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white break-all font-medium">{group.reference_member?.path || 'N/A'}</p>
+                    {module === 'dita' && <TopicTypeBadge topicType={group.reference_member?.topic_type} />}
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -214,6 +218,9 @@ const DuplicateGroupsPage = () => {
                     <thead className="bg-slate-900">
                       <tr>
                         <th className="px-6 py-2 text-left text-xs font-medium text-gray-400 uppercase">Duplicate</th>
+                        {module === 'dita' && (
+                          <th className="px-6 py-2 text-left text-xs font-medium text-gray-400 uppercase">Topic Type</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
@@ -222,6 +229,11 @@ const DuplicateGroupsPage = () => {
                         .map((m) => (
                           <tr key={m.id} className="hover:bg-slate-700/50">
                             <td className="px-6 py-2 text-sm text-gray-300 break-all">{m.path || m.id}</td>
+                            {module === 'dita' && (
+                              <td className="px-6 py-2 text-sm">
+                                <TopicTypeBadge topicType={m.topic_type} />
+                              </td>
+                            )}
                           </tr>
                         ))}
                     </tbody>
