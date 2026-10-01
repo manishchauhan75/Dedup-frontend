@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import SnapshotOverview from './pages/SnapshotOverview';
 import DuplicateGroupsPage from './pages/DuplicateGroupsPage';
+import ContentDuplicatesPage from './pages/ContentDuplicatesPage';
 import ComparePage from './pages/ComparePage';
 import ActivityPage from './pages/ActivityPage';
 import './styles/index.css';
@@ -17,6 +18,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/snapshots/:snapshotId" element={<SnapshotOverview />} />
           <Route path="/snapshots/:snapshotId/:module/groups" element={<DuplicateGroupsPage />} />
+          <Route path="/snapshots/:snapshotId/dita/content-duplicates" element={<ContentDuplicatesPage />} />
           <Route path="/snapshots/:snapshotId/:module/compare/:groupId" element={<ComparePage />} />
           <Route path="/snapshots/:snapshotId/:module/activity" element={<ActivityPage />} />
         </Routes>

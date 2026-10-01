@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, FileText, Image as ImageIcon, History } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileText, Image as ImageIcon, History, Combine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAnalytics, listSnapshots } from '../api/dedup';
 import AnalyticsCards from '../components/AnalyticsCards';
@@ -100,6 +100,13 @@ const SnapshotOverview = () => {
             <div className="flex space-x-4">
               <Link to={`/snapshots/${snapshotId}/dita/groups`} className="text-blue-500 hover:text-blue-400 text-sm font-medium">
                 Duplicate Groups &rarr;
+              </Link>
+              <Link
+                to={`/snapshots/${snapshotId}/dita/content-duplicates`}
+                className="text-blue-500 hover:text-blue-400 text-sm font-medium flex items-center space-x-1"
+              >
+                <Combine className="w-4 h-4" />
+                <span>Content Reuse</span>
               </Link>
               <Link
                 to={`/snapshots/${snapshotId}/dita/activity`}

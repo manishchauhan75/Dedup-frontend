@@ -14,6 +14,13 @@ export const getAnalytics = (snapshotId) =>
 export const getDuplicateGroups = (snapshotId, module) =>
   axios.get(`${base}/${snapshotId}/${module}/duplicate-groups`).then((r) => r.data);
 
+// Read-only report: duplicate/near-duplicate content fragments (paragraphs,
+// list items, tables, steps, notes, ...) across DITA topics, independent of
+// whether the topics themselves are duplicates. No promote/reject workflow —
+// this is purely for finding reuse candidates.
+export const getDitaContentDuplicates = (snapshotId) =>
+  axios.get(`${base}/${snapshotId}/dita/content-duplicates`).then((r) => r.data);
+
 export const compareGroup = (snapshotId, module, groupId) =>
   axios.get(`${base}/${snapshotId}/${module}/compare/${groupId}`).then((r) => r.data);
 
