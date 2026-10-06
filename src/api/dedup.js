@@ -72,9 +72,18 @@ export const getActivity = (snapshotId, module) =>
 // group_ids omitted (or empty) archives every eligible (promoted) group's
 // duplicate files for this snapshot+module (moved into archive_<module>/,
 // never permanently deleted).
-export const deleteGroups = (snapshotId, module, groupIds) =>
+export const archiveGroups = (snapshotId, module, groupIds) =>
   axios
-    .delete(`${base}/${snapshotId}/${module}/delete`, {
+    .delete(`${base}/${snapshotId}/${module}/archive`, {
       data: groupIds && groupIds.length ? { group_ids: groupIds } : {},
     })
     .then((r) => r.data);
+
+// Permanently deletes the entire archive_<module>/ directory (and every
+// file archiveGroups() has ever moved into it) for this snapshot's
+// workspace. Irreversible, unlike archiveGroups() above — no request body,
+// no undo. The archive folder belongs to the workspace, not one
+// snapshot_id, so this also removes anything archived there under a
+// different snapshot that shares the same workspace_path.
+export const purgeArchive = (snapshotId, module) =>
+  axios.delete(`${base}/${snapshotId}/${module}/archive/purge`).then((r) => r.data);

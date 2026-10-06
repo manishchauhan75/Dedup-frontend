@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Archive } from 'lucide-react';
+import { ArrowLeft, Archive, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getActivity, deleteGroups } from '../api/dedup';
+import { getActivity, archiveGroups, purgeArchive } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
 import { formatDate } from '../utils/formatters';
 
 const MODULE_LABEL = { dita: 'DITA', images: 'Image' };
+const ARCHIVE_DIR = { dita: 'archive_topics', images: 'archive_images' };
 
 const ACTION_LABEL = {
   promote: 'Promoted',
@@ -16,6 +17,7 @@ const ACTION_LABEL = {
   reference_update: 'Reference Updated',
   archive: 'Archived',
   delete: 'Archived', // historical rows recorded before this action was renamed
+  purge_archive: 'Purged',
 };
 
 const SummaryPill = ({ label, value, color }) => (
@@ -31,7 +33,9 @@ const ActivityPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   const fetchActivity = async () => {
     try {
@@ -50,10 +54,10 @@ const ActivityPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, module]);
 
-  const handleDelete = async () => {
-    setDeleting(true);
+  const handleArchive = async () => {
+    setArchiving(true);
     try {
-      const result = await deleteGroups(snapshotId, module, null);
+      const result = await archiveGroups(snapshotId, module, null);
       if (result.deleted_count === 0 && result.failed_count === 0) {
         toast('Nothing eligible to archive right now.');
       } else {
@@ -64,7 +68,25 @@ const ActivityPage = () => {
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Archive failed');
     } finally {
-      setDeleting(false);
+      setArchiving(false);
+    }
+  };
+
+  const handlePurge = async () => {
+    setPurging(true);
+    try {
+      const result = await purgeArchive(snapshotId, module);
+      if (result.status === 'nothing_to_purge') {
+        toast('Archive directory is already empty.');
+      } else {
+        toast.success(`Permanently removed ${result.files_removed} file(s) from ${ARCHIVE_DIR[module]}`);
+      }
+      setPurgeConfirmOpen(false);
+      fetchActivity();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Purge failed');
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -87,15 +109,25 @@ const ActivityPage = () => {
             <h1 className="text-2xl font-bold text-white">{MODULE_LABEL[module]} Activity</h1>
             <p className="text-gray-400 mt-1">Snapshot: {snapshotId}</p>
           </div>
-          <button
-            onClick={() => setConfirmOpen(true)}
-            disabled={!data.summary.promoted}
-            className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
-            title={!data.summary.promoted ? 'No promoted groups eligible for archiving' : undefined}
-          >
-            <Archive className="w-4 h-4" />
-            <span>Archive Superseded Files</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setConfirmOpen(true)}
+              disabled={!data.summary.promoted}
+              className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
+              title={!data.summary.promoted ? 'No promoted groups eligible for archiving' : undefined}
+            >
+              <Archive className="w-4 h-4" />
+              <span>Archive Superseded Files</span>
+            </button>
+            <button
+              onClick={() => setPurgeConfirmOpen(true)}
+              className="flex items-center space-x-2 bg-slate-800 border border-red-500/50 hover:bg-red-500/10 text-red-400 px-4 py-2 rounded-lg transition-colors"
+              title={`Permanently deletes everything in ${ARCHIVE_DIR[module]} for this workspace — cannot be undone`}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Purge Archive</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -149,11 +181,21 @@ const ActivityPage = () => {
       <ConfirmDialog
         open={confirmOpen}
         title="Archive superseded files?"
-        message={`This moves every non-reference file from ${MODULE_LABEL[module].toLowerCase()} groups already promoted for this snapshot into the archive_${module} directory. The promoted (reference) copy is never touched.`}
+        message={`This moves every non-reference file from ${MODULE_LABEL[module].toLowerCase()} groups already promoted for this snapshot into the ${ARCHIVE_DIR[module]} directory. The promoted (reference) copy is never touched.`}
         confirmLabel="Archive"
-        loading={deleting}
-        onConfirm={handleDelete}
+        loading={archiving}
+        onConfirm={handleArchive}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={purgeConfirmOpen}
+        title="Permanently delete archived files?"
+        message={`This permanently deletes the entire ${ARCHIVE_DIR[module]} directory for this workspace — every file ever archived into it, for this snapshot or any other snapshot run against the same workspace. This cannot be undone. The live/promoted files are never touched.`}
+        confirmLabel="Permanently Delete"
+        loading={purging}
+        onConfirm={handlePurge}
+        onCancel={() => setPurgeConfirmOpen(false)}
       />
     </div>
   );
