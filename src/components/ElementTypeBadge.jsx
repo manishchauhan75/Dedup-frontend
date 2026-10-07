@@ -9,6 +9,11 @@ const ELEMENT_TYPE_CONFIG = {
   prolog: { bg: 'bg-gray-500', text: 'Prolog' },
   context: { bg: 'bg-cyan-500', text: 'Context' },
   index: { bg: 'bg-orange-500', text: 'Index' },
+  shortdesc: { bg: 'bg-violet-500', text: 'Short Description' },
+  keyword: { bg: 'bg-lime-500', text: 'Keyword' },
+  indexterm: { bg: 'bg-rose-500', text: 'Index Term' },
+  ul: { bg: 'bg-sky-500', text: 'Unordered List' },
+  ol: { bg: 'bg-fuchsia-500', text: 'Ordered List' },
 };
 
 const ElementTypeBadge = ({ elementType }) => {
