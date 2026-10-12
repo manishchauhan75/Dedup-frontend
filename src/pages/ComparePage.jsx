@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { compareGroup, promoteGroups, rejectGroups } from '../api/dedup';
+import { compareGroup, promoteGroups, dismissGroups, markReviewed } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import MatchBadge from '../components/MatchBadge';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
 import DitaContentViewer from '../components/DitaContentViewer';
 import DitaDiffViewer from '../components/DitaDiffViewer';
@@ -46,6 +47,7 @@ const ComparePage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [dismissOpen, setDismissOpen] = useState(false);
 
   const fetchCompare = async () => {
     try {
@@ -64,18 +66,43 @@ const ComparePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, module, groupId]);
 
-  const runAction = async (action) => {
+  const applyResult = (result, verb) => {
+    result.results.forEach((r) => {
+      if (r.status === 'success') toast.success(r.message || `Group ${r.group_id} ${verb}`);
+      else toast.error(r.message || r.error_code);
+    });
+    fetchCompare();
+  };
+
+  const runPromote = async () => {
     setBusy(true);
     try {
-      const fn = action === 'promote' ? promoteGroups : rejectGroups;
-      const result = await fn(snapshotId, module, [Number(groupId)]);
-      result.results.forEach((r) => {
-        if (r.status === 'success') toast.success(r.message || `Group ${r.group_id} ${action}d`);
-        else toast.error(r.message || r.error_code);
-      });
-      fetchCompare();
+      applyResult(await promoteGroups(snapshotId, module, [Number(groupId)]), 'promoted');
     } catch (error) {
-      toast.error(error.response?.data?.detail || `Failed to ${action}`);
+      toast.error(error.response?.data?.detail || 'Failed to promote');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runMarkReviewed = async () => {
+    setBusy(true);
+    try {
+      applyResult(await markReviewed(snapshotId, module, [Number(groupId)]), 'marked reviewed');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to mark reviewed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDismissConfirm = async (reason) => {
+    setBusy(true);
+    try {
+      applyResult(await dismissGroups(snapshotId, module, [Number(groupId)], reason), 'dismissed');
+      setDismissOpen(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to dismiss');
     } finally {
       setBusy(false);
     }
@@ -103,31 +130,51 @@ const ComparePage = () => {
             <MatchBadge matchPercentage={data.match_percentage} matchType={data.match_type} />
             <StatusBadge status={data.status} />
           </div>
-          {data.can_decide ? (
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+            {(data.available_actions || []).includes('promote') && (
               <button
                 disabled={busy}
-                onClick={() => runAction('promote')}
+                onClick={runPromote}
                 className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Promote</span>
               </button>
+            )}
+            {(data.available_actions || []).includes('dismiss') && (
               <button
                 disabled={busy}
-                onClick={() => runAction('reject')}
+                onClick={() => setDismissOpen(true)}
                 className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 <XCircle className="w-4 h-4" />
-                <span>Reject</span>
+                <span>Dismiss</span>
               </button>
-            </div>
-          ) : (
-            <span className="text-sm text-orange-400 bg-orange-500/10 px-4 py-2 rounded-lg">
-              Only 100% matches can be promoted or rejected — review only
-            </span>
-          )}
+            )}
+            {(data.available_actions || []).includes('review') && (
+              <button
+                disabled={busy}
+                onClick={runMarkReviewed}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Mark Reviewed</span>
+              </button>
+            )}
+            {!data.can_decide && (
+              <span className="text-sm text-orange-400 bg-orange-500/10 px-4 py-2 rounded-lg">
+                Only duplicate groups at or above the match threshold can be promoted or dismissed — review only
+              </span>
+            )}
+          </div>
         </div>
+
+        {data.status === 'dismissed' && data.dismiss_reason && (
+          <div className="bg-slate-800 rounded-xl p-4 border border-red-500/30">
+            <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Dismissal Reason</p>
+            <p className="text-sm text-gray-300">{data.dismiss_reason}</p>
+          </div>
+        )}
 
         {module === 'dita' ? (
           <>
@@ -158,6 +205,19 @@ const ComparePage = () => {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={dismissOpen}
+        title="Dismiss group with reason?"
+        message="This permanently marks the group as dismissed — it will never be promoted or re-surfaced for decision. No file is moved, deleted, or modified."
+        confirmLabel="Dismiss"
+        loading={busy}
+        reasonRequired
+        reasonLabel="Dismissal reason (required)"
+        reasonPlaceholder="e.g. These files are intentionally different and should not be treated as duplicates."
+        onConfirm={handleDismissConfirm}
+        onCancel={() => setDismissOpen(false)}
+      />
     </div>
   );
 };

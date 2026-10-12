@@ -58,7 +58,7 @@ const ContentDuplicatesPage = () => {
           <p className="text-gray-500 text-sm mt-1">
             Read-only report of duplicate/near-duplicate paragraphs, list items, tables, steps and notes
             across topics — independent of whether the topics themselves are duplicates. There is no
-            promote/reject action here.
+            promote/dismiss action here.
           </p>
         </div>
 

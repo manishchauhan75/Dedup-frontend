@@ -27,6 +27,7 @@ describe('ComparePage', () => {
       match_type: 'exact',
       status: 'pending',
       can_decide: true,
+      available_actions: ['promote', 'dismiss', 'review'],
       reference: { id: '1', path: 'ref.dita', sha256: 'abc' },
       duplicates: [{ id: '2', path: 'dup.dita', sha256: 'abc' }],
       diff: { identical: true },
@@ -45,13 +46,14 @@ describe('ComparePage', () => {
     await waitFor(() => expect(api.promoteGroups).toHaveBeenCalledWith('snap1', 'dita', [5]));
   });
 
-  it('shows the review-only notice (no Promote/Reject) when the group cannot be decided', async () => {
+  it('shows the review-only notice (no Promote/Dismiss) when the group cannot be decided', async () => {
     api.compareGroup.mockResolvedValue({
       group_id: 5,
       match_percentage: 90,
       match_type: 'near',
       status: 'pending',
       can_decide: false,
+      available_actions: ['review'],
       reference: { id: '1', path: 'ref.dita' },
       duplicates: [{ id: '2', path: 'dup.dita' }],
       diff: null,
@@ -62,7 +64,7 @@ describe('ComparePage', () => {
 
     await waitFor(() => expect(screen.getByText(/review only/)).toBeInTheDocument());
     expect(screen.queryByText('Promote')).not.toBeInTheDocument();
-    expect(screen.queryByText('Reject')).not.toBeInTheDocument();
+    expect(screen.queryByText('Dismiss')).not.toBeInTheDocument();
   });
 
   it('renders a graceful fallback when no diff is available, without crashing', async () => {
@@ -72,6 +74,7 @@ describe('ComparePage', () => {
       match_type: 'near',
       status: 'pending',
       can_decide: false,
+      available_actions: ['review'],
       reference: { id: '1', path: 'ref.dita' },
       duplicates: [{ id: '2', path: 'dup.dita' }],
       diff: null,

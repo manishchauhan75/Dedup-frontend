@@ -3,6 +3,7 @@ import {
   Layers,
   Copy,
   CheckCircle,
+  Eye,
   Sparkles,
   AlertTriangle,
   Upload,
@@ -34,8 +35,9 @@ const AnalyticsCards = ({ title, analytics, topicTypes }) => {
     { label: 'Exact Matches', value: a.exact_matches, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10' },
     { label: 'Near Duplicates', value: a.near_duplicates, icon: Sparkles, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
     { label: 'Review Required', value: a.review_required, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: 'Reviewed', value: a.reviewed, icon: Eye, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Promoted', value: a.promoted, icon: Upload, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Rejected', value: a.rejected, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10' },
+    { label: 'Dismissed', value: a.dismissed, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10' },
     { label: 'Deleted', value: a.deleted, icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-500/10' },
     { label: 'Remaining', value: a.remaining, icon: Clock, color: 'text-pink-500', bg: 'bg-pink-500/10' },
   ];

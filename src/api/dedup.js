@@ -16,7 +16,7 @@ export const getDuplicateGroups = (snapshotId, module) =>
 
 // Read-only report: duplicate/near-duplicate content fragments (paragraphs,
 // list items, tables, steps, notes, ...) across DITA topics, independent of
-// whether the topics themselves are duplicates. No promote/reject workflow —
+// whether the topics themselves are duplicates. No promote/dismiss workflow —
 // this is purely for finding reuse candidates.
 export const getDitaContentDuplicates = (snapshotId) =>
   axios.get(`${base}/${snapshotId}/dita/content-duplicates`).then((r) => r.data);
@@ -49,7 +49,7 @@ export const buildImageFileUrl = (snapshotId, objectId, { thumbnail, max } = {})
   return `${axios.defaults.baseURL}${base}/${snapshotId}/images/objects/${objectId}/file${query ? `?${query}` : ''}`;
 };
 
-// Promote/reject respond 200 with a per-group results array — a group
+// Promote/dismiss respond 200 with a per-group results array — a group
 // failing the 100%-match rule is not an HTTP error, it's an item in
 // `results` with status: "failed" and an error_code. Callers must inspect
 // the array, not rely on try/catch, to report per-group outcomes.
@@ -63,8 +63,18 @@ export const promoteGroups = (snapshotId, module, groupIds) =>
 export const promoteAllGroups = (snapshotId, module) =>
   axios.post(`${base}/${snapshotId}/${module}/promote-all`).then((r) => r.data);
 
-export const rejectGroups = (snapshotId, module, groupIds) =>
-  axios.post(`${base}/${snapshotId}/${module}/reject`, { group_ids: groupIds }).then((r) => r.data);
+// "Dismiss with Reason" — requires a reason, persisted as
+// DuplicateGroup.dismiss_reason and on the activity log entry. Terminal
+// status is "dismissed" (renamed from "rejected"); URL renamed from
+// /reject to /dismiss to match.
+export const dismissGroups = (snapshotId, module, groupIds, reason) =>
+  axios.post(`${base}/${snapshotId}/${module}/dismiss`, { group_ids: groupIds, reason }).then((r) => r.data);
+
+// "Mark as Reviewed" — a non-terminal acknowledgment checkpoint. Never
+// touches a file; a reviewed group remains fully eligible for promote/
+// dismiss afterward, same as a pending one.
+export const markReviewed = (snapshotId, module, groupIds) =>
+  axios.post(`${base}/${snapshotId}/${module}/review`, { group_ids: groupIds }).then((r) => r.data);
 
 export const getActivity = (snapshotId, module) =>
   axios.get(`${base}/${snapshotId}/${module}/activity`).then((r) => r.data);

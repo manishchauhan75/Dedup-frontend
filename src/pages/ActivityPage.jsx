@@ -13,7 +13,9 @@ const ARCHIVE_DIR = { dita: 'archive_topics', images: 'archive_images' };
 
 const ACTION_LABEL = {
   promote: 'Promoted',
-  reject: 'Rejected',
+  dismiss: 'Dismissed',
+  reject: 'Dismissed', // historical rows recorded before this action was renamed
+  mark_reviewed: 'Marked Reviewed',
   reference_update: 'Reference Updated',
   archive: 'Archived',
   delete: 'Archived', // historical rows recorded before this action was renamed
@@ -130,12 +132,13 @@ const ActivityPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
           <SummaryPill label="Total Groups" value={data.summary.total_groups} color="text-white" />
-          <SummaryPill label="Promoted" value={data.summary.promoted} color="text-green-400" />
-          <SummaryPill label="Rejected" value={data.summary.rejected} color="text-red-400" />
-          <SummaryPill label="Archived" value={data.summary.deleted} color="text-slate-400" />
           <SummaryPill label="Pending" value={data.summary.pending} color="text-yellow-400" />
+          <SummaryPill label="Reviewed" value={data.summary.reviewed} color="text-blue-400" />
+          <SummaryPill label="Promoted" value={data.summary.promoted} color="text-green-400" />
+          <SummaryPill label="Dismissed" value={data.summary.dismissed} color="text-red-400" />
+          <SummaryPill label="Archived" value={data.summary.deleted} color="text-slate-400" />
           <SummaryPill label="Remaining" value={data.summary.remaining} color="text-pink-400" />
         </div>
 
@@ -149,13 +152,14 @@ const ActivityPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">Source</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">Destination</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">Message / Reason</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">When</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
                 {data.activity.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                       No activity recorded yet for this module.
                     </td>
                   </tr>
@@ -169,6 +173,7 @@ const ActivityPage = () => {
                     <td className="px-6 py-3 text-sm">
                       <StatusBadge status={entry.status} />
                     </td>
+                    <td className="px-6 py-3 text-sm text-gray-300 break-all max-w-xs">{entry.message || '—'}</td>
                     <td className="px-6 py-3 text-sm text-gray-400 whitespace-nowrap">{formatDate(entry.created_at)}</td>
                   </tr>
                 ))}

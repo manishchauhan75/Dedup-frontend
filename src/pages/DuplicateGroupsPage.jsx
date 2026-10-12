@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCheck, CheckCircle, XCircle, Search } from 'lucide-react';
+import { ArrowLeft, CheckCheck, CheckCircle, XCircle, Eye, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getDuplicateGroups, promoteAllGroups, promoteGroups, rejectGroups } from '../api/dedup';
+import { getDuplicateGroups, promoteAllGroups, promoteGroups, dismissGroups, markReviewed } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import MatchBadge from '../components/MatchBadge';
 import TopicTypeBadge from '../components/TopicTypeBadge';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
 
 const MODULE_LABEL = { dita: 'DITA', images: 'Image' };
@@ -17,6 +18,7 @@ const DuplicateGroupsPage = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(new Set());
   const [busy, setBusy] = useState(false);
+  const [dismissTarget, setDismissTarget] = useState(null); // group_ids[] currently being dismissed
 
   const fetchGroups = async () => {
     try {
@@ -45,8 +47,9 @@ const DuplicateGroupsPage = () => {
     });
   };
 
-  // Promote/reject respond 200 with a per-group results array — never a
-  // plain HTTP error for a business-rule rejection like PROMOTION_NOT_ALLOWED.
+  // Promote/dismiss/review respond 200 with a per-group results array —
+  // never a plain HTTP error for a business-rule failure like
+  // PROMOTION_NOT_ALLOWED.
   const applyResults = (results) => {
     results.forEach((r) => {
       if (r.status === 'success') toast.success(`Group ${r.group_id}: ${r.message || 'success'}`);
@@ -56,22 +59,49 @@ const DuplicateGroupsPage = () => {
     setSelected(new Set());
   };
 
-  const runAction = async (action, groupIds) => {
+  const runPromote = async (groupIds) => {
     if (groupIds.length === 0) return;
     setBusy(true);
     try {
-      const data = action === 'promote' ? await promoteGroups(snapshotId, module, groupIds) : await rejectGroups(snapshotId, module, groupIds);
+      const data = await promoteGroups(snapshotId, module, groupIds);
       applyResults(data.results);
     } catch (error) {
-      toast.error(error.response?.data?.detail || `Failed to ${action}`);
+      toast.error(error.response?.data?.detail || 'Failed to promote');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runMarkReviewed = async (groupIds) => {
+    if (groupIds.length === 0) return;
+    setBusy(true);
+    try {
+      const data = await markReviewed(snapshotId, module, groupIds);
+      applyResults(data.results);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to mark reviewed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDismissConfirm = async (reason) => {
+    const groupIds = dismissTarget;
+    setBusy(true);
+    try {
+      const data = await dismissGroups(snapshotId, module, groupIds, reason);
+      applyResults(data.results);
+      setDismissTarget(null);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to dismiss');
     } finally {
       setBusy(false);
     }
   };
 
   // Bulk promote — no selection needed, the server finds every 100%-matched
-  // group itself. Distinct from runAction('promote', selected): that only
-  // ever promotes what's checked here; this ignores selection entirely.
+  // group itself. Distinct from runPromote(selected): that only ever
+  // promotes what's checked here; this ignores selection entirely.
   const runPromoteAll = async () => {
     setBusy(true);
     try {
@@ -97,6 +127,7 @@ const DuplicateGroupsPage = () => {
   if (loading) return <Loader />;
 
   const selectableGroups = groups.filter((g) => g.can_decide);
+  const reviewableGroupIds = groups.filter((g) => g.available_actions?.includes('review')).map((g) => g.group_id);
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -114,38 +145,51 @@ const DuplicateGroupsPage = () => {
             <h1 className="text-2xl font-bold text-white">{MODULE_LABEL[module]} Duplicate Groups</h1>
             <p className="text-gray-400 mt-1">Snapshot: {snapshotId}</p>
           </div>
-          {selectableGroups.length > 0 && (
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+            {reviewableGroupIds.length > 0 && (
               <button
                 disabled={busy}
-                onClick={runPromoteAll}
-                title="Promotes every 100%-matched pending group for this snapshot+module in one call"
-                className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                onClick={() => runMarkReviewed(reviewableGroupIds)}
+                title="Marks every still-pending group as reviewed — an acknowledgment only, never promotes or dismisses anything"
+                className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
               >
-                <CheckCheck className="w-4 h-4" />
-                <span>Promote All ({selectableGroups.length})</span>
+                <Eye className="w-4 h-4" />
+                <span>Mark All Reviewed ({reviewableGroupIds.length})</span>
               </button>
-              <div className="flex items-center space-x-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2">
-                <span className="text-sm text-gray-400">{selected.size} selected</span>
+            )}
+            {selectableGroups.length > 0 && (
+              <>
                 <button
-                  disabled={busy || selected.size === 0}
-                  onClick={() => runAction('promote', [...selected])}
-                  className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  disabled={busy}
+                  onClick={runPromoteAll}
+                  title="Promotes every 100%-matched pending/reviewed group for this snapshot+module in one call"
+                  className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
                 >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Promote</span>
+                  <CheckCheck className="w-4 h-4" />
+                  <span>Promote All ({selectableGroups.length})</span>
                 </button>
-                <button
-                  disabled={busy || selected.size === 0}
-                  onClick={() => runAction('reject', [...selected])}
-                  className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Reject</span>
-                </button>
-              </div>
-            </div>
-          )}
+                <div className="flex items-center space-x-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2">
+                  <span className="text-sm text-gray-400">{selected.size} selected</span>
+                  <button
+                    disabled={busy || selected.size === 0}
+                    onClick={() => runPromote([...selected])}
+                    className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Promote</span>
+                  </button>
+                  <button
+                    disabled={busy || selected.size === 0}
+                    onClick={() => setDismissTarget([...selected])}
+                    className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>Dismiss</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {groups.length === 0 ? (
@@ -154,7 +198,9 @@ const DuplicateGroupsPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {groups.map((group) => (
+            {groups.map((group) => {
+              const actions = group.available_actions || [];
+              return (
               <div key={group.group_id} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="px-6 py-3 border-b border-slate-700 bg-slate-900/50 flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center space-x-3">
@@ -178,32 +224,54 @@ const DuplicateGroupsPage = () => {
                       <Search className="w-4 h-4" />
                       <span>Compare</span>
                     </Link>
-                    {group.can_decide ? (
-                      <>
-                        <button
-                          disabled={busy}
-                          onClick={() => runAction('promote', [group.group_id])}
-                          className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-                        >
-                          Promote
-                        </button>
-                        <button
-                          disabled={busy}
-                          onClick={() => runAction('reject', [group.group_id])}
-                          className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    ) : (
-                      group.status === 'pending' && (
-                        <span className="text-xs text-orange-400 bg-orange-500/10 px-3 py-1.5 rounded-lg">
-                          Review only — below 100% match
-                        </span>
-                      )
+                    {actions.includes('promote') && (
+                      <button
+                        disabled={busy}
+                        onClick={() => runPromote([group.group_id])}
+                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                      >
+                        Promote
+                      </button>
+                    )}
+                    {actions.includes('dismiss') && (
+                      <button
+                        disabled={busy}
+                        onClick={() => setDismissTarget([group.group_id])}
+                        className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    )}
+                    {actions.includes('review') && (
+                      <button
+                        disabled={busy}
+                        onClick={() => runMarkReviewed([group.group_id])}
+                        className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>Mark Reviewed</span>
+                      </button>
+                    )}
+                    {actions.length === 0 && group.status === 'reviewed' && (
+                      <span className="text-xs text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg">
+                        Reviewed — below match threshold, no further action
+                      </span>
                     )}
                   </div>
                 </div>
+
+                {actions.includes('review') && !actions.includes('promote') && (
+                  <div className="px-6 py-2 bg-orange-500/10 border-b border-slate-700">
+                    <span className="text-xs text-orange-400">Review only — below 100% match</span>
+                  </div>
+                )}
+
+                {group.status === 'dismissed' && group.dismiss_reason && (
+                  <div className="px-6 py-2 border-b border-slate-700 bg-red-500/5">
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-0.5">Dismissal Reason</p>
+                    <p className="text-sm text-gray-300">{group.dismiss_reason}</p>
+                  </div>
+                )}
 
                 <div className="px-6 py-3 border-b border-slate-700">
                   <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Reference</p>
@@ -240,10 +308,24 @@ const DuplicateGroupsPage = () => {
                   </table>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={dismissTarget !== null}
+        title={`Dismiss ${dismissTarget?.length > 1 ? `${dismissTarget.length} groups` : 'group'} with reason?`}
+        message="This permanently marks the group(s) as dismissed — they will never be promoted or re-surfaced for decision. No file is moved, deleted, or modified."
+        confirmLabel="Dismiss"
+        loading={busy}
+        reasonRequired
+        reasonLabel="Dismissal reason (required)"
+        reasonPlaceholder="e.g. These files are intentionally different and should not be treated as duplicates."
+        onConfirm={handleDismissConfirm}
+        onCancel={() => setDismissTarget(null)}
+      />
     </div>
   );
 };
