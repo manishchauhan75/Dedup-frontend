@@ -89,11 +89,41 @@ export const archiveGroups = (snapshotId, module, groupIds) =>
     })
     .then((r) => r.data);
 
-// Permanently deletes the entire archive_<module>/ directory (and every
-// file archiveGroups() has ever moved into it) for this snapshot's
-// workspace. Irreversible, unlike archiveGroups() above — no request body,
-// no undo. The archive folder belongs to the workspace, not one
-// snapshot_id, so this also removes anything archived there under a
-// different snapshot that shares the same workspace_path.
-export const purgeArchive = (snapshotId, module) =>
-  axios.delete(`${base}/${snapshotId}/${module}/archive/purge`).then((r) => r.data);
+// Downloads everything in archive_<module>/ (every file archiveGroups() has
+// ever moved into it) as a ZIP and saves it in the browser. Read-only on
+// the server — nothing is moved or deleted. The archive folder belongs to
+// the workspace, not one snapshot_id, so this also includes anything
+// archived there under a different snapshot sharing the same
+// workspace_path. Resolves with the saved filename.
+export const downloadArchive = async (snapshotId, module) => {
+  let response;
+  try {
+    response = await axios.get(`${base}/${snapshotId}/${module}/archive/download`, { responseType: 'blob' });
+  } catch (error) {
+    // With responseType 'blob' an error body arrives as a Blob too — parse
+    // it back to JSON so callers can read error.response.data.detail as usual.
+    const data = error.response?.data;
+    if (data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await data.text());
+      } catch {
+        // Not JSON - leave as-is; callers fall back to a generic message.
+      }
+    }
+    throw error;
+  }
+
+  const disposition = response.headers['content-disposition'] || '';
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const filename = match ? match[1] : `archive_${module}_${snapshotId}.zip`;
+
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  return filename;
+};

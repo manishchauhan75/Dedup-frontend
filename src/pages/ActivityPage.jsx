@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Archive, Trash2 } from 'lucide-react';
+import { ArrowLeft, Archive, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getActivity, archiveGroups, purgeArchive } from '../api/dedup';
+import { getActivity, archiveGroups, downloadArchive } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
@@ -19,7 +19,7 @@ const ACTION_LABEL = {
   reference_update: 'Reference Updated',
   archive: 'Archived',
   delete: 'Archived', // historical rows recorded before this action was renamed
-  purge_archive: 'Purged',
+  purge_archive: 'Purged', // historical rows - the purge API has been removed
 };
 
 const SummaryPill = ({ label, value, color }) => (
@@ -36,8 +36,7 @@ const ActivityPage = () => {
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
-  const [purging, setPurging] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const fetchActivity = async () => {
     try {
@@ -74,21 +73,20 @@ const ActivityPage = () => {
     }
   };
 
-  const handlePurge = async () => {
-    setPurging(true);
+  const handleDownload = async () => {
+    setDownloading(true);
     try {
-      const result = await purgeArchive(snapshotId, module);
-      if (result.status === 'nothing_to_purge') {
-        toast('Archive directory is already empty.');
-      } else {
-        toast.success(`Permanently removed ${result.files_removed} file(s) from ${ARCHIVE_DIR[module]}`);
-      }
-      setPurgeConfirmOpen(false);
-      fetchActivity();
+      const filename = await downloadArchive(snapshotId, module);
+      toast.success(`Downloaded ${filename}`);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Purge failed');
+      // 404 = archive directory missing or empty: nothing to download yet.
+      if (error.response?.status === 404) {
+        toast(error.response.data?.detail || `Nothing archived in ${ARCHIVE_DIR[module]} yet.`);
+      } else {
+        toast.error(error.response?.data?.detail || 'Download failed');
+      }
     } finally {
-      setPurging(false);
+      setDownloading(false);
     }
   };
 
@@ -122,12 +120,13 @@ const ActivityPage = () => {
               <span>Archive Superseded Files</span>
             </button>
             <button
-              onClick={() => setPurgeConfirmOpen(true)}
-              className="flex items-center space-x-2 bg-slate-800 border border-red-500/50 hover:bg-red-500/10 text-red-400 px-4 py-2 rounded-lg transition-colors"
-              title={`Permanently deletes everything in ${ARCHIVE_DIR[module]} for this workspace — cannot be undone`}
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center space-x-2 bg-slate-800 border border-slate-600 hover:bg-slate-700 disabled:opacity-40 text-gray-200 px-4 py-2 rounded-lg transition-colors"
+              title={`Downloads everything in ${ARCHIVE_DIR[module]} for this workspace as a ZIP — archived files are kept`}
             >
-              <Trash2 className="w-4 h-4" />
-              <span>Purge Archive</span>
+              <Download className="w-4 h-4" />
+              <span>{downloading ? 'Preparing ZIP…' : 'Download Archived Copies'}</span>
             </button>
           </div>
         </div>
@@ -191,18 +190,7 @@ const ActivityPage = () => {
         loading={archiving}
         onConfirm={handleArchive}
         onCancel={() => setConfirmOpen(false)}
-      />
-
-      <ConfirmDialog
-        open={purgeConfirmOpen}
-        title="Permanently delete archived files?"
-        message={`This permanently deletes the entire ${ARCHIVE_DIR[module]} directory for this workspace — every file ever archived into it, for this snapshot or any other snapshot run against the same workspace. This cannot be undone. The live/promoted files are never touched.`}
-        confirmLabel="Permanently Delete"
-        loading={purging}
-        onConfirm={handlePurge}
-        onCancel={() => setPurgeConfirmOpen(false)}
-      />
-    </div>
+      />    </div>
   );
 };
 
