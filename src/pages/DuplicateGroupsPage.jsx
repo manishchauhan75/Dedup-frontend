@@ -8,6 +8,7 @@ import MatchBadge from '../components/MatchBadge';
 import TopicTypeBadge from '../components/TopicTypeBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
+import { isPromotedNotArchived, toastGroupResult } from '../utils/groupResultToast';
 
 const MODULE_LABEL = { dita: 'DITA', images: 'Image' };
 
@@ -51,10 +52,7 @@ const DuplicateGroupsPage = () => {
   // never a plain HTTP error for a business-rule failure like
   // PROMOTION_NOT_ALLOWED.
   const applyResults = (results) => {
-    results.forEach((r) => {
-      if (r.status === 'success') toast.success(`Group ${r.group_id}: ${r.message || 'success'}`);
-      else toast.error(`Group ${r.group_id}: ${r.message || r.error_code}`);
-    });
+    results.forEach((r) => toastGroupResult(r, `Group ${r.group_id}: `));
     fetchGroups();
     setSelected(new Set());
   };
@@ -109,11 +107,17 @@ const DuplicateGroupsPage = () => {
       if (data.total_groups === 0) {
         toast('No 100% matched groups to promote.');
       } else {
+        // Promotion archives each group's original files itself; a group
+        // promoted but not (fully) archived still counts as promoted.
+        const notArchived = data.results.filter(isPromotedNotArchived).length;
         const extra = [
           data.skipped_count ? `${data.skipped_count} skipped` : null,
           data.failed_count ? `${data.failed_count} failed` : null,
+          notArchived ? `${notArchived} not archived` : null,
         ].filter(Boolean).join(', ');
-        toast.success(`Promoted ${data.promoted_count}/${data.total_groups} group(s)${extra ? ` (${extra})` : ''}`);
+        const summary = `Promoted ${data.promoted_count}/${data.total_groups} group(s)${extra ? ` (${extra})` : ''}`;
+        if (notArchived) toast(summary, { icon: '⚠️', duration: 8000 });
+        else toast.success(summary);
       }
       fetchGroups();
       setSelected(new Set());

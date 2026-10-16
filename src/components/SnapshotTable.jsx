@@ -27,6 +27,7 @@ const SnapshotTable = ({ snapshots }) => {
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Groups</th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Pending</th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Promoted</th>
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Archived</th>
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -39,6 +40,8 @@ const SnapshotTable = ({ snapshots }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{s.total_groups}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-400">{s.pending}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400">{s.promoted}</td>
+                {/* Promoted groups whose original files are archived - the normal end state of a promotion. */}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{s.archived}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     onClick={() => navigate(`/snapshots/${s.snapshot_id}`)}

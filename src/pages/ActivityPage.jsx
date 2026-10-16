@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Archive, Download } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getActivity, archiveGroups, downloadArchive } from '../api/dedup';
+import { getActivity, downloadArchive } from '../api/dedup';
 import StatusBadge from '../components/StatusBadge';
-import ConfirmDialog from '../components/ConfirmDialog';
 import Loader from '../components/Loader';
 import { formatDate } from '../utils/formatters';
 
@@ -34,8 +33,6 @@ const ActivityPage = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [archiving, setArchiving] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const fetchActivity = async () => {
@@ -55,24 +52,8 @@ const ActivityPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId, module]);
 
-  const handleArchive = async () => {
-    setArchiving(true);
-    try {
-      const result = await archiveGroups(snapshotId, module, null);
-      if (result.deleted_count === 0 && result.failed_count === 0) {
-        toast('Nothing eligible to archive right now.');
-      } else {
-        toast.success(`Archived ${result.deleted_count} file(s)${result.failed_count ? `, ${result.failed_count} failed` : ''}`);
-      }
-      setConfirmOpen(false);
-      fetchActivity();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Archive failed');
-    } finally {
-      setArchiving(false);
-    }
-  };
-
+  // Files are archived by promotion itself - there is no separate archive
+  // action; this only downloads what's already in the archive folder.
   const handleDownload = async () => {
     setDownloading(true);
     try {
@@ -111,15 +92,6 @@ const ActivityPage = () => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => setConfirmOpen(true)}
-              disabled={!data.summary.promoted}
-              className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
-              title={!data.summary.promoted ? 'No promoted groups eligible for archiving' : undefined}
-            >
-              <Archive className="w-4 h-4" />
-              <span>Archive Superseded Files</span>
-            </button>
-            <button
               onClick={handleDownload}
               disabled={downloading}
               className="flex items-center space-x-2 bg-slate-800 border border-slate-600 hover:bg-slate-700 disabled:opacity-40 text-gray-200 px-4 py-2 rounded-lg transition-colors"
@@ -137,7 +109,7 @@ const ActivityPage = () => {
           <SummaryPill label="Reviewed" value={data.summary.reviewed} color="text-blue-400" />
           <SummaryPill label="Promoted" value={data.summary.promoted} color="text-green-400" />
           <SummaryPill label="Dismissed" value={data.summary.dismissed} color="text-red-400" />
-          <SummaryPill label="Archived" value={data.summary.deleted} color="text-slate-400" />
+          <SummaryPill label="Archived" value={data.summary.archived} color="text-slate-400" />
           <SummaryPill label="Remaining" value={data.summary.remaining} color="text-pink-400" />
         </div>
 
@@ -181,16 +153,7 @@ const ActivityPage = () => {
           </div>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Archive superseded files?"
-        message={`This moves every non-reference file from ${MODULE_LABEL[module].toLowerCase()} groups already promoted for this snapshot into the ${ARCHIVE_DIR[module]} directory. The promoted (reference) copy is never touched.`}
-        confirmLabel="Archive"
-        loading={archiving}
-        onConfirm={handleArchive}
-        onCancel={() => setConfirmOpen(false)}
-      />    </div>
+    </div>
   );
 };
 

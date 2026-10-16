@@ -53,6 +53,13 @@ export const buildImageFileUrl = (snapshotId, objectId, { thumbnail, max } = {})
 // failing the 100%-match rule is not an HTTP error, it's an item in
 // `results` with status: "failed" and an error_code. Callers must inspect
 // the array, not rely on try/catch, to report per-group outcomes.
+//
+// Promotion also archives the group's original files (master and
+// duplicates) into archive_<module>/ once every reference points at the
+// global copy; the group then ends "archived". A promote result can be
+// "success" with error_code ARCHIVE_SKIPPED/ARCHIVE_FAILED (promoted, files
+// not (all) archived). Each promote result carries global_path and
+// archived_paths, both relative to the workspace.
 export const promoteGroups = (snapshotId, module, groupIds) =>
   axios.post(`${base}/${snapshotId}/${module}/promote`, { group_ids: groupIds }).then((r) => r.data);
 
@@ -79,18 +86,8 @@ export const markReviewed = (snapshotId, module, groupIds) =>
 export const getActivity = (snapshotId, module) =>
   axios.get(`${base}/${snapshotId}/${module}/activity`).then((r) => r.data);
 
-// group_ids omitted (or empty) archives every eligible (promoted) group's
-// duplicate files for this snapshot+module (moved into archive_<module>/,
-// never permanently deleted).
-export const archiveGroups = (snapshotId, module, groupIds) =>
-  axios
-    .delete(`${base}/${snapshotId}/${module}/archive`, {
-      data: groupIds && groupIds.length ? { group_ids: groupIds } : {},
-    })
-    .then((r) => r.data);
-
-// Downloads everything in archive_<module>/ (every file archiveGroups() has
-// ever moved into it) as a ZIP and saves it in the browser. Read-only on
+// Downloads everything in archive_<module>/ (every file promotion has ever
+// archived into it) as a ZIP and saves it in the browser. Read-only on
 // the server — nothing is moved or deleted. The archive folder belongs to
 // the workspace, not one snapshot_id, so this also includes anything
 // archived there under a different snapshot sharing the same

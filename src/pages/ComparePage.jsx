@@ -11,6 +11,7 @@ import DitaContentViewer from '../components/DitaContentViewer';
 import DitaDiffViewer from '../components/DitaDiffViewer';
 import ImagePreview from '../components/ImagePreview';
 import ImageDiffViewer from '../components/ImageDiffViewer';
+import { toastGroupResult } from '../utils/groupResultToast';
 
 const MODULE_LABEL = { dita: 'DITA', images: 'Image' };
 
@@ -67,10 +68,9 @@ const ComparePage = () => {
   }, [snapshotId, module, groupId]);
 
   const applyResult = (result, verb) => {
-    result.results.forEach((r) => {
-      if (r.status === 'success') toast.success(r.message || `Group ${r.group_id} ${verb}`);
-      else toast.error(r.message || r.error_code);
-    });
+    result.results.forEach((r) =>
+      toastGroupResult(r.status === 'success' && !r.message ? { ...r, message: `Group ${r.group_id} ${verb}` } : r)
+    );
     fetchCompare();
   };
 

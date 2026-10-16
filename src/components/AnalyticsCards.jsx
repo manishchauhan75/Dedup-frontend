@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   Upload,
   XCircle,
-  Trash2,
+  Archive,
   Clock,
   Lightbulb,
   ListChecks,
@@ -38,7 +38,7 @@ const AnalyticsCards = ({ title, analytics, topicTypes }) => {
     { label: 'Reviewed', value: a.reviewed, icon: Eye, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Promoted', value: a.promoted, icon: Upload, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Dismissed', value: a.dismissed, icon: XCircle, color: 'text-red-500', bg: 'bg-red-500/10' },
-    { label: 'Deleted', value: a.deleted, icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-500/10' },
+    { label: 'Archived', value: a.archived, icon: Archive, color: 'text-slate-400', bg: 'bg-slate-500/10' },
     { label: 'Remaining', value: a.remaining, icon: Clock, color: 'text-pink-500', bg: 'bg-pink-500/10' },
   ];
 

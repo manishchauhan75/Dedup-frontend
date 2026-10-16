@@ -17,7 +17,7 @@ const AnalyticsCharts = ({ analytics, topicTypes }) => {
   const pieData = [
     { name: 'Promoted', value: a.promoted || 0 },
     { name: 'Rejected', value: a.rejected || 0 },
-    { name: 'Deleted', value: a.deleted || 0 },
+    { name: 'Archived', value: a.archived || 0 },
     { name: 'Remaining', value: a.remaining || 0 },
   ];
 
